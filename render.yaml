@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: grupo-zamprest-whatsapp
+    runtime: docker
+    plan: 0.5c-512mb
+    region: virginia
+    dockerfilePath: ./whatsapp/Dockerfile
+    dockerContext: .
+    autoDeploy: false
+    disk:
+      name: whatsapp-sessoes
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: WUZAPI_PORT
+        value: "10000"
+      - key: WUZAPI_ADMIN_TOKEN
+        sync: false
+      - key: WUZAPI_GLOBAL_ENCRYPTION_KEY
+        sync: false
+      - key: TZ
+        value: America/Sao_Paulo
