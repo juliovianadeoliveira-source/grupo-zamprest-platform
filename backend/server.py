@@ -101,6 +101,11 @@ class Handler(BaseHTTPRequestHandler):
     def handle_request(self, method):
         try:
             path = urlparse(self.path).path.rstrip('/') or '/'
+            assets = {'/': ('index.html', 'text/html; charset=utf-8'), '/public/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/public/style.css': ('style.css', 'text/css; charset=utf-8')}
+            if method == 'GET' and path in assets:
+                filename, content_type = assets[path]
+                with open(os.path.join(os.path.dirname(__file__), 'public', filename), 'rb') as asset: data = asset.read()
+                self.send_response(200); self.send_header('Content-Type',content_type); self.send_header('Content-Length',str(len(data))); self.send_header('X-Content-Type-Options','nosniff'); self.end_headers(); self.wfile.write(data); return
             if method == 'POST' and self.headers.get('Origin') != ALLOWED_ORIGIN:
                 return self.respond(403, {'error':'Origem não autorizada.'})
             with connect() as db:
