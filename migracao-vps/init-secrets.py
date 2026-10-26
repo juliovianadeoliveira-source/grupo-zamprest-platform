@@ -16,5 +16,5 @@ except FileExistsError:
     raise SystemExit('As credenciais já existem; nenhuma foi alterada.')
 with os.fdopen(fd, 'w', encoding='utf-8') as f:
     for key, value in values.items():
-        f.write(f'{key}={value}\\n')
+        f.write(f'{key}={value}\n')
 print('Credenciais locais criadas com acesso restrito.')
