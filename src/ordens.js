@@ -6,7 +6,7 @@ async function renderOrders(){
  if(location.hash!=='#ordens'||document.body.classList.contains('zp-locked')||!window.zpDb)return;
  const run=++generation,db=window.zpDb,user=(await db.auth.getUser()).data.user;if(!user)return;
  const companiesResult=await db.from('zp_empresas').select('id,nome').order('nome');if(run!==generation||location.hash!=='#ordens')return;
- const root=document.querySelector('#content');root.replaceChildren();const panel=node('section',undefined,'card panel');panel.append(node('h2','Ordens de serviço'),node('p','Cadastre e acompanhe os serviços de cada empresa.'));root.append(panel);
+ const root=document.querySelector('#content');root.replaceChildren();const panel=node('section',undefined,'card panel');panel.append(node('h2','Ordens de serviço'),node('p','Cadastre serviços e visitas. As visitas com data aparecem automaticamente na agenda.'));root.append(panel);
  if(companiesResult.error){panel.append(node('p','Não foi possível carregar as empresas.','zp-error'));return}const companies=companiesResult.data||[];
  if(!companies.length){panel.append(node('p','Cadastre uma empresa no menu Empresas para criar ordens.'));const link=node('a','Ir para empresas');link.href='#empresas';panel.append(link);return}
  const current=companies.find(c=>c.id===sessionStorage.getItem('zp_company'))||companies[0],select=document.createElement('select');select.className='zp-input';select.setAttribute('aria-label','Escolher empresa');for(const c of companies){const o=node('option',c.nome);o.value=c.id;select.append(o)}select.value=current.id;select.addEventListener('change',()=>{sessionStorage.setItem('zp_company',select.value);renderOrders()});panel.append(select);
