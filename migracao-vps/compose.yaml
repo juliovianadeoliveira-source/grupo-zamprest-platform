@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:16.6
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: zamprest
+      POSTGRES_USER: zamprest
+      POSTGRES_PASSWORD: ${ZP_DB_PASSWORD:?Execute init-secrets.py antes de iniciar}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zamprest -d zamprest"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  whatsapp:
+    image: asternic/wuzapi:1.0.9
+    restart: unless-stopped
+    entrypoint: ["/app/wuzapi", "--datadir=/data", "--logtype=json"]
+    environment:
+      WUZAPI_PORT: "8080"
+      WUZAPI_ADMIN_TOKEN: ${ZP_WUZ_ADMIN_TOKEN:?Execute init-secrets.py antes de iniciar}
+      WUZAPI_GLOBAL_ENCRYPTION_KEY: ${ZP_WUZ_ENCRYPTION_KEY:?Execute init-secrets.py antes de iniciar}
+      TZ: America/Sao_Paulo
+      LOG_LEVEL: warn
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - whatsapp_data:/data
+volumes:
+  postgres_data:
+  whatsapp_data:
