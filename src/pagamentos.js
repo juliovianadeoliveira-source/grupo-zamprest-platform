@@ -1,0 +1,23 @@
+const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n};
+function field(form,label,name,type='text'){const l=node('label',label),i=document.createElement('input');i.name=name;i.type=type;i.required=true;i.maxLength=type==='text'?200:120;l.append(i);form.append(l);return i}
+let revision=0;
+async function renderPayments(){
+ if(location.hash!=='#financeiro'||document.body.classList.contains('zp-locked')||!window.zpDb)return;
+ const run=++revision,db=window.zpDb,user=(await db.auth.getUser()).data.user;if(!user)return;
+ const companies=await db.from('zp_empresas').select('id,nome').order('nome');
+ if(run!==revision||location.hash!=='#financeiro')return;
+ const root=document.querySelector('#content');root.replaceChildren();const panel=node('section',undefined,'card panel');
+ panel.append(node('h2','Pagamentos e chaves Pix'),node('p','Cadastre os dados para cobrança manual. Antes de compartilhar, confirme a chave e o titular com sua instituição.'));
+ const note=node('div',undefined,'agent-note');note.append(node('strong','Integrações bancárias'),node('p','Mercado Pago, PagBank e outros bancos ainda não estão conectados. A geração automática de cobranças e a confirmação de pagamentos ainda não estão disponíveis. Não coloque senhas, tokens ou credenciais aqui.'));panel.append(note);root.append(panel);
+ if(companies.error){panel.append(node('p','Não foi possível carregar as empresas.','zp-error'));return}
+ if(!companies.data.length){panel.append(node('p','Cadastre uma empresa primeiro.'));return}
+ const company=companies.data.find(c=>c.id===sessionStorage.getItem('zp_company'))||companies.data[0],select=document.createElement('select');select.className='zp-input';select.setAttribute('aria-label','Escolher empresa');for(const c of companies.data){const o=node('option',c.nome);o.value=c.id;select.append(o)}select.value=company.id;select.addEventListener('change',()=>{sessionStorage.setItem('zp_company',select.value);renderPayments()});panel.append(select);
+ const res=await db.from('zp_pix_contas').select('id,instituicao,titular,tipo,chave').eq('empresa_id',company.id).order('created_at',{ascending:false});if(run!==revision||location.hash!=='#financeiro')return;
+ if(res.error){panel.append(node('p','Não foi possível carregar os dados Pix.','zp-error'));return}
+ const form=document.createElement('form');form.className='zp-form';const bank=field(form,'Instituição (ex.: Mercado Pago, PagBank ou banco)','instituicao'),holder=field(form,'Nome do titular','titular');bank.maxLength=120;holder.maxLength=120;
+ const label=node('label','Tipo de chave'),kind=document.createElement('select');for(const [value,name] of [['cpf','CPF'],['cnpj','CNPJ'],['email','E-mail'],['telefone','Telefone'],['aleatoria','Chave aleatória']]){const option=node('option',name);option.value=value;kind.append(option)}label.append(kind);form.append(label);const key=field(form,'Chave Pix','chave');const save=node('button','Salvar dados Pix');save.type='submit';const msg=node('p','');msg.setAttribute('role','status');form.append(save,msg);panel.append(form);
+ form.addEventListener('submit',async e=>{e.preventDefault();if(!bank.value.trim()||!holder.value.trim()||!key.value.trim()){msg.textContent='Preencha os dados antes de salvar.';return}save.disabled=true;const {error}=await db.from('zp_pix_contas').insert({empresa_id:company.id,instituicao:bank.value.trim(),titular:holder.value.trim(),tipo:kind.value,chave:key.value.trim()});if(error){msg.textContent='Não foi possível salvar os dados.';save.disabled=false}else await renderPayments()});
+ panel.append(node('h3','Chaves cadastradas'));if(!res.data.length)panel.append(node('p','Nenhuma chave cadastrada.'));
+ for(const item of res.data){const card=node('div',undefined,'zp-row');card.append(node('strong',item.instituicao+' · '+item.titular),node('small','Tipo: '+item.tipo+' · Chave: '+item.chave));const remove=node('button','Excluir chave');remove.type='button';remove.className='secondary';remove.addEventListener('click',async()=>{if(!confirm('Excluir os dados Pix cadastrados para '+item.instituicao+'?'))return;remove.disabled=true;const {data,error}=await db.from('zp_pix_contas').delete().eq('id',item.id).eq('empresa_id',company.id).select('id').maybeSingle();if(error||!data){panel.append(node('p','Não foi possível excluir.','zp-error'));remove.disabled=false}else await renderPayments()});card.append(remove);panel.append(card)}
+}
+window.addEventListener('hashchange',()=>{revision++;setTimeout(renderPayments,0)});window.addEventListener('zp-auth-ready',()=>setTimeout(renderPayments,0));setTimeout(renderPayments,0);
